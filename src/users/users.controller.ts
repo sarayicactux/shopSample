@@ -1,33 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto } from 'src/DTO/user.dto';
+import {
+  Controller,
+  Get,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { UserService } from './users.service';
+import { UpdateUserDto } from '../dto/user.dto';
 
+import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+
+@ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
-export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
-
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
+export class UserController {
+  constructor(private readonly userService: UserService) {}
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  @ApiResponse({ status: 200, description: 'Return all users.' })
+  async findAll() {
+    return await this.userService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @ApiResponse({ status: 200, description: 'Return a user.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async findOne(@Param('id') id: number) {
+    return await this.userService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'User successfully updated.' })
+  async update(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
+    return await this.userService.updateUser(id, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @ApiResponse({ status: 200, description: 'User successfully deleted.' })
+  async remove(@Param('id') id: number) {
+    return await this.userService.deleteUser(id);
   }
 }

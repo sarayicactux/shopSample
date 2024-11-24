@@ -1,26 +1,88 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto, UpdateUserDto } from 'src/DTO/user.dto';
-
+import {
+    BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
+import { User } from '../models/user.model';
+import { RegisterDto } from 'src/DTO/auth.dto';
+import { UserDataAccess } from 'src/dataAccess/user.dataAccess';
+import { Identifier } from 'sequelize';
 
 @Injectable()
-export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+export class UserService {
+  constructor(private readonly userDataAccess: UserDataAccess) {}
+
+  async findAll(): Promise<User[]> {
+    return await this.userDataAccess.findAll();
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async updateUser(id: Identifier, updateUserDto: UpdateUserDto) {
+    const user = await this.userDataAccess.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (updateUserDto.mobile) {
+      const isMobileValid = /^[0-9]{11}$/.test(updateUserDto.mobile);
+      if (!isMobileValid) {
+        throw new BadRequestException('Invalid mobile number format');
+      }
+    }
+
+    const result = await this.userDataAccess.update(
+      id,
+      updateUserDto.name,
+      updateUserDto.lastName,
+      updateUserDto.userName,
+      updateUserDto.mobile,
+      updateUserDto.email,
+    );
+
+    return result;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+//   async createUser(createUserDto: RegisterDto) {
+//     const { name, lastName, userName, password, mobile, email } = createUserDto;
+//     const user = await this.userDataAccess.createUser(
+//       name,
+//       lastName,
+//       userName,
+//       password,
+//       mobile,
+//       email,
+//     );
+//     return user;
+//   }
+
+  async findOne(id: number) {
+    const user = await this.userDataAccess.findOne(id);
+    if (!user) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: 'not exist',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return user;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async deleteUser(userId: Identifier): Promise<boolean> {
+    const user = await this.userDataAccess.findByIdDeleteUser(userId);
+    if (!user) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: 'user not found',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    await this.userDataAccess.destroy(userId);
+    return true;
   }
 }
